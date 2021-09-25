@@ -68,8 +68,14 @@ func main() {
 					extent := extent(data...)
 					min, max := minMax(data...)
 
+					// prepare flags
+					var flags giu.PlotFlags
+					if len(s.dims) == 1 && s.dims[0] == "default" {
+						flags = giu.PlotFlagsNoLegend
+					}
+
 					// make plot
-					giu.Plot(s.name).AxisLimits(0, float64(extent), min-5, max+5, giu.ConditionAlways).Plots(widgets...).Build()
+					giu.Plot(s.name).AxisLimits(0, float64(extent), min-5, max+5, giu.ConditionAlways).Flags(flags).Plots(widgets...).Build()
 				})
 			}),
 		)

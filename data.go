@@ -79,13 +79,13 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric) error {
 	}
 
 	// get dimension
-	dim := "*"
+	dim := "default"
 	if len(metric.Label) > 0 {
 		pairs := make([]string, 0, len(metric.Label))
 		for _, label := range metric.Label {
-			pairs = append(pairs, *label.Name+"_"+*label.Value)
+			pairs = append(pairs, *label.Name+":"+*label.Value)
 		}
-		dim = strings.Join(pairs, "-")
+		dim = strings.Join(pairs, " ")
 	}
 
 	// get list
