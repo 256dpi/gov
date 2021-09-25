@@ -50,9 +50,9 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric) error {
 	switch *family.Type {
 	case dto.MetricType_COUNTER:
 		knd = counter
-	case dto.MetricType_GAUGE:
+	case dto.MetricType_GAUGE, dto.MetricType_UNTYPED:
 		knd = gauge
-	case dto.MetricType_SUMMARY, dto.MetricType_UNTYPED, dto.MetricType_HISTOGRAM:
+	case dto.MetricType_SUMMARY, dto.MetricType_HISTOGRAM:
 		return nil
 	}
 
@@ -73,7 +73,11 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric) error {
 	var value float64
 	switch knd {
 	case gauge:
-		value = *metric.Gauge.Value
+		if metric.Gauge != nil {
+			value = *metric.Gauge.Value
+		} else if metric.Untyped != nil {
+			value = *metric.Untyped.Value
+		}
 	case counter:
 		value = *metric.Counter.Value
 	}
@@ -97,13 +101,11 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric) error {
 	}
 
 	// add value
-	list.add(value)
+	list.add(value, knd == counter)
 
-	// metric.Counter.Exemplar
 	// metric.Summary.SampleSum
 	// metric.Summary.SampleSum
 	// metric.Summary.Quantile
-	// metric.Untyped.Value
 	// metric.Histogram.SampleCount
 	// metric.Histogram.SampleSum
 	// metric.Histogram.Bucket
