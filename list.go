@@ -35,12 +35,26 @@ func (l *list) slice() []float64 {
 	return l.data[l.last : l.last+l.length]
 }
 
-func minMax(list []float64) (float64, float64) {
+func extent(lists ...[]float64) int {
+	// find extent
+	n := 0
+	for _, list := range lists {
+		if len(list) > n {
+			n = len(list)
+		}
+	}
+
+	return n
+}
+
+func minMax(lists ...[]float64) (float64, float64) {
 	// find minimum and maximum
-	min, max := list[0], list[0]
-	for _, value := range list {
-		min = math.Min(min, value)
-		max = math.Max(max, value)
+	min, max := lists[0][0], lists[0][0]
+	for _, list := range lists {
+		for _, value := range list {
+			min = math.Min(min, value)
+			max = math.Max(max, value)
+		}
 	}
 
 	return min, max

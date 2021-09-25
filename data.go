@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"sync"
 
 	dto "github.com/prometheus/client_model/go"
@@ -18,10 +19,11 @@ const (
 )
 
 type series struct {
-	kind kind
-	name string
-	help string
-	list *list
+	kind  kind
+	name  string
+	help  string
+	dims  []string
+	lists map[string]*list
 }
 
 func ingest(families []dto.MetricFamily) error {
@@ -58,10 +60,10 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric) error {
 	srs, ok := data[*family.Name]
 	if !ok {
 		srs = &series{
-			kind: knd,
-			name: *family.Name,
-			help: *family.Help,
-			list: newList(),
+			kind:  knd,
+			name:  *family.Name,
+			help:  *family.Help,
+			lists: map[string]*list{},
 		}
 		data[*family.Name] = srs
 		names = append(names, *family.Name)
@@ -76,12 +78,27 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric) error {
 		value = *metric.Counter.Value
 	}
 
-	// add value
-	srs.list.add(value)
+	// get dimension
+	dim := "*"
+	if len(metric.Label) > 0 {
+		pairs := make([]string, 0, len(metric.Label))
+		for _, label := range metric.Label {
+			pairs = append(pairs, *label.Name+"_"+*label.Value)
+		}
+		dim = strings.Join(pairs, "-")
+	}
 
-	// metric.Label
-	// metric.Gauge.Value
-	// metric.Counter.Value
+	// get list
+	list, ok := srs.lists[dim]
+	if !ok {
+		list = newList()
+		srs.lists[dim] = list
+		srs.dims = append(srs.dims, dim)
+	}
+
+	// add value
+	list.add(value)
+
 	// metric.Counter.Exemplar
 	// metric.Summary.SampleSum
 	// metric.Summary.SampleSum

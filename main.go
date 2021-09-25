@@ -56,14 +56,20 @@ func main() {
 			giu.Custom(func() {
 				// walk series
 				walk(func(s *series) {
-					// get list
-					list := s.list.slice()
-					min, max := minMax(list)
+					// prepare lists and widgets
+					data := make([][]float64, 0, len(s.lists))
+					widgets := make([]giu.PlotWidget, 0, len(s.lists))
+					for _, dim := range s.dims {
+						data = append(data, s.lists[dim].slice())
+						widgets = append(widgets, giu.PlotLine(dim, s.lists[dim].slice()))
+					}
+
+					// get extent, min and max
+					extent := extent(data...)
+					min, max := minMax(data...)
 
 					// make plot
-					giu.Plot(s.name).AxisLimits(0, float64(len(list)), min-5, max+5, giu.ConditionAlways).Plots(
-						giu.PlotLine("", list),
-					).Build()
+					giu.Plot(s.name).AxisLimits(0, float64(extent), min-5, max+5, giu.ConditionAlways).Plots(widgets...).Build()
 				})
 			}),
 		)
