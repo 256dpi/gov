@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+var seriesLength = flag.Int("series-length", 100, "the series length")
 var targetURL = flag.String("target-url", "http://0.0.0.0:8080/metrics", "the target URL")
 var scrapeInterval = flag.Duration("scrape-interval", 250*time.Millisecond, "the scrape interval")
 var metricsAddr = flag.String("metrics-addr", ":8080", "the UI metrics addr")

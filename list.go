@@ -2,24 +2,25 @@ package main
 
 import "math"
 
-const storage = 100
-
 type list struct {
-	data      [storage * 2]float64
-	lastValue float64
-	lastPos   int
 	length    int
+	data      []float64
+	lastItem  int
+	lastValue float64
 }
 
-func newList() *list {
-	return &list{}
+func newList(length int) *list {
+	return &list{
+		length: length,
+		data:   make([]float64, length*2),
+	}
 }
 
 func (l *list) add(value float64, diff bool) {
 	// increment position
-	l.lastPos++
-	if l.lastPos >= storage {
-		l.lastPos = 0
+	l.lastItem++
+	if l.lastItem >= l.length {
+		l.lastItem = 0
 	}
 
 	// get difference
@@ -29,18 +30,13 @@ func (l *list) add(value float64, diff bool) {
 	}
 
 	// write values
-	l.data[l.lastPos] = n
-	l.data[storage+l.lastPos] = n
+	l.data[l.lastItem] = n
+	l.data[l.length+l.lastItem] = n
 	l.lastValue = value
-
-	// increment length
-	if l.length < storage {
-		l.length++
-	}
 }
 
 func (l *list) slice() []float64 {
-	return l.data[l.lastPos : l.lastPos+l.length]
+	return l.data[l.lastItem : l.lastItem+l.length]
 }
 
 func extent(lists ...[]float64) int {

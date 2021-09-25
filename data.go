@@ -95,7 +95,7 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric) error {
 	// get list
 	list, ok := srs.lists[dim]
 	if !ok {
-		list = newList()
+		list = newList(*seriesLength)
 		srs.lists[dim] = list
 		srs.dims = append(srs.dims, dim)
 	}
