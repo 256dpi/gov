@@ -65,8 +65,7 @@ func main() {
 						widgets = append(widgets, giu.PlotLine(dim, s.lists[dim].slice()))
 					}
 
-					// get extent, min and max
-					extent := extent(data...)
+					// get min and max
 					min, max := minMax(data...)
 
 					// prepare flags
@@ -77,7 +76,7 @@ func main() {
 
 					// make plot
 					giu.Tooltip(s.help).Build()
-					giu.Plot(s.name).AxisLimits(0, float64(extent), min-5, max+5, giu.ConditionAlways).Flags(flags).Plots(widgets...).Build()
+					giu.Plot(s.name).AxisLimits(0, float64(*seriesLength), min-5, max+5, giu.ConditionAlways).Flags(flags).Plots(widgets...).Build()
 				})
 			}),
 		)
