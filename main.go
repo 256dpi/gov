@@ -24,7 +24,7 @@ func main() {
 	}()
 
 	// create window
-	win := giu.NewMasterWindow("Promview", 1400, 900, 0)
+	win := giu.NewMasterWindow("promview: "+*targetURL, 1400, 900, 0)
 
 	// run scraper
 	go func() {
