@@ -12,6 +12,7 @@ import (
 var seriesLength = flag.Int("series-length", 100, "the series length")
 var targetURL = flag.String("target-url", "http://0.0.0.0:8080/metrics", "the target URL")
 var scrapeInterval = flag.Duration("scrape-interval", 250*time.Millisecond, "the scrape interval")
+var columns = flag.Int("columns", 3, "number of columns")
 var metricsAddr = flag.String("metrics-addr", ":8080", "the UI metrics addr")
 
 func main() {
@@ -55,14 +56,17 @@ func main() {
 		w, h := win.GetSize()
 		giu.Window("Data").Pos(0, 0).Size(float32(w), float32(h)).Flags(giu.WindowFlagsNoResize | giu.WindowFlagsNoMove).Layout(
 			giu.Custom(func() {
+				// prepare widgets
+				var widgets []giu.Widget
+
 				// walk series
 				walk(func(s *series) {
 					// prepare lists and widgets
 					data := make([][]float64, 0, len(s.lists))
-					widgets := make([]giu.PlotWidget, 0, len(s.lists))
+					lines := make([]giu.PlotWidget, 0, len(s.lists))
 					for _, dim := range s.dims {
 						data = append(data, s.lists[dim].slice())
-						widgets = append(widgets, giu.PlotLine(dim, s.lists[dim].slice()))
+						lines = append(lines, giu.PlotLine(dim, s.lists[dim].slice()))
 					}
 
 					// get min and max
@@ -74,10 +78,28 @@ func main() {
 						flags = giu.PlotFlagsNoLegend
 					}
 
-					// make plot
-					giu.Tooltip(s.help).Build()
-					giu.Plot(s.name).AxisLimits(0, float64(*seriesLength), min-5, max+5, giu.ConditionAlways).Flags(flags).Plots(widgets...).Build()
+					// append widget
+					widgets = append(widgets, giu.Custom(func() {
+						giu.Tooltip(s.help).Build()
+						giu.Plot(s.name).
+							Size((w-50) / *columns, 0).
+							AxisLimits(0, float64(*seriesLength), min-5, max+5, giu.ConditionAlways).
+							Flags(flags).Plots(lines...).
+							Build()
+					}))
+
+					// check row
+					if len(widgets) == *columns {
+						giu.Row(widgets...).Build()
+						widgets = nil
+					}
 				})
+
+				// check row
+				if len(widgets) == *columns {
+					giu.Row(widgets...).Build()
+					widgets = nil
+				}
 			}),
 		)
 	})
