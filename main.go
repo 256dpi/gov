@@ -12,7 +12,7 @@ import (
 var seriesLength = flag.Int("series-length", 100, "the series length")
 var targetURL = flag.String("target-url", "http://0.0.0.0:8080/metrics", "the target URL")
 var scrapeInterval = flag.Duration("scrape-interval", 250*time.Millisecond, "the scrape interval")
-var columns = flag.Int("columns", 3, "number of columns")
+var initColumns = flag.Int("columns", 3, "the initial number of columns")
 var metricsAddr = flag.String("metrics-addr", ":8080", "the UI metrics addr")
 
 func main() {
@@ -51,10 +51,14 @@ func main() {
 		}
 	}()
 
+	// prepare config
+	columns := int32(*initColumns)
+
 	// run ui code
 	win.Run(func() {
 		w, h := win.GetSize()
-		giu.Window("Data").Pos(0, 0).Size(float32(w), float32(h)).Flags(giu.WindowFlagsNoResize | giu.WindowFlagsNoMove).Layout(
+		giu.Window("Data").Pos(0, 0).Size(float32(w), float32(h)).Flags(giu.WindowFlagsNoResize|giu.WindowFlagsNoMove).Layout(
+			giu.SliderInt("Columns", &columns, 1, 6),
 			giu.Custom(func() {
 				// prepare widgets
 				var widgets []giu.Widget
@@ -82,21 +86,21 @@ func main() {
 					widgets = append(widgets, giu.Custom(func() {
 						giu.Tooltip(s.help).Build()
 						giu.Plot(s.name).
-							Size((w-50) / *columns, 0).
+							Size((w-(int(columns)*15))/int(columns), 0).
 							AxisLimits(0, float64(*seriesLength), min-5, max+5, giu.ConditionAlways).
 							Flags(flags).Plots(lines...).
 							Build()
 					}))
 
 					// check row
-					if len(widgets) == *columns {
+					if len(widgets) == int(columns) {
 						giu.Row(widgets...).Build()
 						widgets = nil
 					}
 				})
 
 				// check row
-				if len(widgets) == *columns {
+				if len(widgets) == int(columns) {
 					giu.Row(widgets...).Build()
 					widgets = nil
 				}
