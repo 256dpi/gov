@@ -75,6 +75,7 @@ func main() {
 					}
 
 					// make plot
+					giu.Tooltip(s.help).Build()
 					giu.Plot(s.name).AxisLimits(0, float64(extent), min-5, max+5, giu.ConditionAlways).Flags(flags).Plots(widgets...).Build()
 				})
 			}),
