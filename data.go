@@ -1,7 +1,6 @@
 package main
 
 import (
-	"math"
 	"sync"
 
 	dto "github.com/prometheus/client_model/go"
@@ -18,31 +17,11 @@ const (
 	counter
 )
 
-const storage = 100
-
 type series struct {
-	kind   kind
-	name   string
-	help   string
-	list   [storage * 2]float64
-	last   int
-	length int
-}
-
-func (s *series) slice() []float64 {
-	return s.list[s.last : s.last+s.length]
-}
-
-func (s *series) minMax() (float64, float64) {
-	// find minimum and maximum
-	slice := s.slice()
-	min, max := slice[0], slice[0]
-	for _, value := range slice {
-		min = math.Min(min, value)
-		max = math.Max(max, value)
-	}
-
-	return min, max
+	kind kind
+	name string
+	help string
+	list *list
 }
 
 func ingest(families []dto.MetricFamily) error {
@@ -82,6 +61,7 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric) error {
 			kind: knd,
 			name: *family.Name,
 			help: *family.Help,
+			list: newList(),
 		}
 		data[*family.Name] = srs
 		names = append(names, *family.Name)
@@ -96,20 +76,8 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric) error {
 		value = *metric.Counter.Value
 	}
 
-	// increment position
-	srs.last++
-	if srs.last >= storage {
-		srs.last = 0
-	}
-
-	// write values
-	srs.list[srs.last] = value
-	srs.list[storage+srs.last] = value
-
-	// increment length
-	if srs.length < storage {
-		srs.length++
-	}
+	// add value
+	srs.list.add(value)
 
 	// metric.Label
 	// metric.Gauge.Value

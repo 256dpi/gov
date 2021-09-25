@@ -56,13 +56,13 @@ func main() {
 			giu.Custom(func() {
 				// walk series
 				walk(func(s *series) {
-					// get data
-					slice := s.slice()
-					min, max := s.minMax()
+					// get list
+					list := s.list.slice()
+					min, max := minMax(list)
 
 					// make plot
-					giu.Plot(s.name).AxisLimits(0, float64(len(slice)), min-5, max+5, giu.ConditionAlways).Plots(
-						giu.PlotLine("", slice),
+					giu.Plot(s.name).AxisLimits(0, float64(len(list)), min-5, max+5, giu.ConditionAlways).Plots(
+						giu.PlotLine("", list),
 					).Build()
 				})
 			}),
