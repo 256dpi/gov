@@ -1,6 +1,7 @@
 package main
 
 import (
+	"sort"
 	"strings"
 	"sync"
 
@@ -40,6 +41,9 @@ func ingest(families []dto.MetricFamily) error {
 			}
 		}
 	}
+
+	// sort series
+	sort.Strings(names)
 
 	return nil
 }
