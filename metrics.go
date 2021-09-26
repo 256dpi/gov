@@ -3,7 +3,6 @@ package main
 import (
 	"io"
 	"net/http"
-	"sort"
 	"strings"
 	"sync"
 
@@ -12,8 +11,7 @@ import (
 )
 
 var metricsMutex sync.RWMutex
-var metricsSeries = map[string]*series{}
-var metricsNames []string
+var metricsTree = metricsNode{name: "#root"}
 
 type kind int
 
@@ -22,7 +20,7 @@ const (
 	counter
 )
 
-type series struct {
+type metricSeries struct {
 	kind  kind
 	name  string
 	help  string
@@ -73,9 +71,6 @@ func scrapeMetrics(url string) error {
 		}
 	}
 
-	// sort names
-	sort.Strings(metricsNames)
-
 	return nil
 }
 
@@ -91,17 +86,17 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric) error {
 		return nil
 	}
 
-	// get series
-	srs, ok := metricsSeries[*family.Name]
-	if !ok {
-		srs = &series{
+	// ensure node
+	node := metricsTree.ensure(strings.Split(*family.Name, "_"))
+
+	// ensure series
+	if node.series == nil {
+		node.series = &metricSeries{
 			kind:  knd,
 			name:  *family.Name,
 			help:  *family.Help,
 			lists: map[string]*list{},
 		}
-		metricsSeries[*family.Name] = srs
-		metricsNames = append(metricsNames, *family.Name)
 	}
 
 	// get value
@@ -128,11 +123,11 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric) error {
 	}
 
 	// get list
-	list, ok := srs.lists[dim]
+	list, ok := node.series.lists[dim]
 	if !ok {
 		list = newList(*seriesLength)
-		srs.lists[dim] = list
-		srs.dims = append(srs.dims, dim)
+		node.series.lists[dim] = list
+		node.series.dims = append(node.series.dims, dim)
 	}
 
 	// add value
@@ -149,13 +144,24 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric) error {
 	return nil
 }
 
-func walkMetrics(fn func(*series)) {
+func walkMetrics(node *metricsNode, fn func(*metricSeries)) {
 	// acquire mutex
 	metricsMutex.RLock()
 	defer metricsMutex.RUnlock()
 
 	// yield series
-	for _, name := range metricsNames {
-		fn(metricsSeries[name])
-	}
+	node.walk(func(m *metricsNode) {
+		if m.series != nil {
+			fn(m.series)
+		}
+	})
+}
+
+func withMetricsTree(fn func(node2 *metricsNode)) {
+	// acquire mutex
+	metricsMutex.RLock()
+	defer metricsMutex.RUnlock()
+
+	// yield
+	fn(&metricsTree)
 }
