@@ -60,7 +60,7 @@ func loadProfile(name, url string) error {
 	// sort nodes
 	root.sort()
 
-	// set
+	// set profile
 	profilesMutex.Lock()
 	profileNodes[name] = root
 	profilesMutex.Unlock()
@@ -68,9 +68,9 @@ func loadProfile(name, url string) error {
 	return nil
 }
 
-type walkFN func(level int, offset, length float32, name string, self, total int64)
+type walkProfileFunc func(level int, offset, length float32, name string, self, total int64)
 
-func walkProfile(name string, fn walkFN) {
+func walkProfile(name string, fn walkProfileFunc) {
 	// get node
 	profilesMutex.Lock()
 	node := profileNodes[name]
@@ -81,11 +81,12 @@ func walkProfile(name string, fn walkFN) {
 		// get divisor
 		divisor := float32(node.total)
 
-		walkNode(node, 0, 0, divisor, fn)
+		// walk node
+		walkProfileNode(node, 0, 0, divisor, fn)
 	}
 }
 
-func walkNode(nd *node, level int, offset, divisor float32, fn walkFN) float32 {
+func walkProfileNode(nd *node, level int, offset, divisor float32, fn walkProfileFunc) float32 {
 	// get length
 	length := float32(nd.total) / divisor
 
@@ -94,7 +95,7 @@ func walkNode(nd *node, level int, offset, divisor float32, fn walkFN) float32 {
 
 	// walk children
 	for _, node := range nd.nodes {
-		offset += walkNode(node, level+1, offset, divisor, fn)
+		offset += walkProfileNode(node, level+1, offset, divisor, fn)
 	}
 
 	return length

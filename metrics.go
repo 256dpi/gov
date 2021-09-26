@@ -11,9 +11,9 @@ import (
 	"github.com/prometheus/common/expfmt"
 )
 
-var mutex sync.RWMutex
-var data = map[string]*series{}
-var names []string
+var metricsMutex sync.RWMutex
+var metricsSeries = map[string]*series{}
+var metricsNames []string
 
 type kind int
 
@@ -60,8 +60,8 @@ func scrapeMetrics(url string) error {
 	}
 
 	// acquire mutex
-	mutex.Lock()
-	defer mutex.Unlock()
+	metricsMutex.Lock()
+	defer metricsMutex.Unlock()
 
 	// ingest metrics
 	for _, family := range families {
@@ -73,8 +73,8 @@ func scrapeMetrics(url string) error {
 		}
 	}
 
-	// sort series
-	sort.Strings(names)
+	// sort names
+	sort.Strings(metricsNames)
 
 	return nil
 }
@@ -92,7 +92,7 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric) error {
 	}
 
 	// get series
-	srs, ok := data[*family.Name]
+	srs, ok := metricsSeries[*family.Name]
 	if !ok {
 		srs = &series{
 			kind:  knd,
@@ -100,8 +100,8 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric) error {
 			help:  *family.Help,
 			lists: map[string]*list{},
 		}
-		data[*family.Name] = srs
-		names = append(names, *family.Name)
+		metricsSeries[*family.Name] = srs
+		metricsNames = append(metricsNames, *family.Name)
 	}
 
 	// get value
@@ -151,11 +151,11 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric) error {
 
 func walkMetrics(fn func(*series)) {
 	// acquire mutex
-	mutex.RLock()
-	defer mutex.RUnlock()
+	metricsMutex.RLock()
+	defer metricsMutex.RUnlock()
 
 	// yield series
-	for _, name := range names {
-		fn(data[name])
+	for _, name := range metricsNames {
+		fn(metricsSeries[name])
 	}
 }
