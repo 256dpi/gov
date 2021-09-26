@@ -149,7 +149,7 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric) error {
 	return nil
 }
 
-func walk(fn func(*series)) {
+func walkMetrics(fn func(*series)) {
 	// acquire mutex
 	mutex.RLock()
 	defer mutex.RUnlock()

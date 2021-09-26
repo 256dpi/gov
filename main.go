@@ -107,8 +107,8 @@ func metrics(mw *giu.MasterWindow) func() {
 				// prepare widgets
 				var widgets []giu.Widget
 
-				// walk series
-				walk(func(s *series) {
+				// walk metrics
+				walkMetrics(func(s *series) {
 					// prepare lists and widgets
 					data := make([][]float64, 0, len(s.lists))
 					lines := make([]giu.PlotWidget, 0, len(s.lists))
