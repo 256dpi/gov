@@ -30,7 +30,7 @@ func main() {
 	}()
 
 	// create window
-	win := giu.NewMasterWindow("promview: "+*targetURL, 1400, 900, 0)
+	mw := giu.NewMasterWindow("promview: "+*targetURL, 1400, 900, 0)
 
 	// run scraper
 	go func() {
@@ -58,7 +58,7 @@ func main() {
 	// run profiler
 	go func() {
 		for {
-			prf, err := getProfile(*targetURL + *profilePath)
+			_, err := getProfile(*targetURL + *profilePath)
 			if err != nil {
 				panic(err)
 			}
@@ -69,9 +69,14 @@ func main() {
 	columns := int32(*initColumns)
 
 	// run ui code
-	win.Run(func() {
-		w, h := win.GetSize()
-		giu.Window("Data").Pos(0, 0).Size(float32(w), float32(h)).Flags(giu.WindowFlagsNoResize|giu.WindowFlagsNoMove).Layout(
+	mw.Run(func() {
+		mw, mh := mw.GetSize()
+
+		win := giu.Window("Metrics")
+		win.Pos(100, 100)
+		win.Size(float32(mw)*0.7, float32(mh)*0.7)
+		w, _ := win.CurrentSize()
+		win.Layout(
 			giu.SliderInt("Columns", &columns, 1, 6),
 			giu.Custom(func() {
 				// prepare widgets
@@ -100,7 +105,7 @@ func main() {
 					widgets = append(widgets, giu.Custom(func() {
 						giu.Tooltip(s.help).Build()
 						giu.Plot(s.name).
-							Size((w-(int(columns)*15))/int(columns), 0).
+							Size((int(w)-(int(columns)*15))/int(columns), 0).
 							AxisLimits(0, float64(*seriesLength), min-5, max+5, giu.ConditionAlways).
 							Flags(flags).Plots(lines...).
 							Build()
