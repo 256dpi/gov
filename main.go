@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/AllenDang/giu"
+	"github.com/go-gl/gl/v3.2-core/gl"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -74,6 +75,11 @@ func main() {
 
 	// run ui code
 	mw.Run(func() {
+		// background
+		gl.ClearColor(40.0/255.0, 45.0/255.0, 50.0/255.0, 1)
+		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+
+		// draw widgets
 		drawMetrics()
 		drawProfiles()
 	})
