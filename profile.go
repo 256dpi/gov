@@ -7,10 +7,10 @@ import (
 	"github.com/google/pprof/profile"
 )
 
-var lastNode *node
-var lastNodeMutex sync.Mutex
+var profileNodes = map[string]*node{}
+var profilesMutex sync.Mutex
 
-func loadProfile(url string) error {
+func loadProfile(name, url string) error {
 	// get profile
 	res, err := http.Get(url + "?seconds=1")
 	if err != nil {
@@ -61,26 +61,27 @@ func loadProfile(url string) error {
 	root.sort()
 
 	// set
-	lastNodeMutex.Lock()
-	lastNode = root
-	lastNodeMutex.Unlock()
+	profilesMutex.Lock()
+	profileNodes[name] = root
+	profilesMutex.Unlock()
 
 	return nil
 }
 
 type walkFN func(level int, offset, length float32, name string, self, total int64)
 
-func walkProfile(fn walkFN) {
-	// acquire mutex
-	lastNodeMutex.Lock()
-	defer lastNodeMutex.Unlock()
+func walkProfile(name string, fn walkFN) {
+	// get node
+	profilesMutex.Lock()
+	node := profileNodes[name]
+	profilesMutex.Unlock()
 
-	// walk last root node
-	if lastNode != nil {
+	// walk node
+	if node != nil {
 		// get divisor
-		divisor := float32(lastNode.total)
+		divisor := float32(node.total)
 
-		walkNode(lastNode, 0, 0, divisor, fn)
+		walkNode(node, 0, 0, divisor, fn)
 	}
 }
 

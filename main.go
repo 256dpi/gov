@@ -17,7 +17,8 @@ import (
 var seriesLength = flag.Int("series-length", 100, "the series length")
 var targetURL = flag.String("target-url", "http://0.0.0.0:6060/", "the target URL")
 var metricsPath = flag.String("metrics-path", "metrics", "the metrics path")
-var profilePath = flag.String("profile-path", "debug/pprof/profile", "the profile path")
+var cpuProfilePath = flag.String("cpu-profile-path", "debug/pprof/profile", "the CPU profile path")
+var heapProfilePath = flag.String("heap-profile-path", "debug/pprof/heap", "the heap profile path")
 var scrapeInterval = flag.Duration("scrape-interval", 250*time.Millisecond, "the scrape interval")
 var initColumns = flag.Int("columns", 3, "the initial number of columns")
 var selfAddr = flag.String("self-addr", ":7070", "the UI metrics addr")
@@ -52,11 +53,25 @@ func main() {
 		}
 	}()
 
-	// run profiler
+	// run CPU profiler
 	go func() {
 		for {
 			// load profile
-			err := loadProfile(*targetURL + *profilePath)
+			err := loadProfile("cpu", *targetURL+*cpuProfilePath)
+			if err != nil {
+				println("profile: " + err.Error())
+			}
+
+			// update
+			giu.Update()
+		}
+	}()
+
+	// run heap profiler
+	go func() {
+		for {
+			// load profile
+			err := loadProfile("heap", *targetURL+*heapProfilePath)
 			if err != nil {
 				println("profile: " + err.Error())
 			}
@@ -68,7 +83,8 @@ func main() {
 
 	// get drawers
 	drawMetrics := metrics(mw)
-	drawProfiles := profiles(mw)
+	drawCPUProfile := profileDrawer(mw, "cpu", "CPU Profile")
+	drawHeapProfile := profileDrawer(mw, "heap", "Heap Profile")
 
 	// run ui code
 	mw.Run(func() {
@@ -78,7 +94,8 @@ func main() {
 
 		// draw widgets
 		drawMetrics()
-		drawProfiles()
+		drawCPUProfile()
+		drawHeapProfile()
 	})
 }
 
@@ -153,13 +170,13 @@ func metrics(mw *giu.MasterWindow) func() {
 	}
 }
 
-func profiles(mw *giu.MasterWindow) func() {
+func profileDrawer(mw *giu.MasterWindow, name, title string) func() {
 	return func() {
 		// get size
 		mw, mh := mw.GetSize()
 
 		// create window
-		win := giu.Window("Profile")
+		win := giu.Window(title)
 		win.Pos(100, 100)
 		win.Size(float32(mw)*0.7, float32(mh)*0.7)
 
@@ -177,7 +194,7 @@ func profiles(mw *giu.MasterWindow) func() {
 				defer giu.PopStyleColor()
 
 				// walk profile
-				walkProfile(func(level int, offset, length float32, name string, self, total int64) {
+				walkProfile(name, func(level int, offset, length float32, name string, self, total int64) {
 					// set cursor
 					giu.SetCursorPos(image.Pt(x+int(offset*w), y+level*50))
 
