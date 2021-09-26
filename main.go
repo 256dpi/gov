@@ -133,12 +133,12 @@ func metrics(mw *giu.MasterWindow) func() {
 
 					// append widget
 					widgets = append(widgets, giu.Custom(func() {
-						giu.Tooltip(s.help).Build()
 						giu.Plot(s.name).
 							Size((int(w)-(int(columns)*15))/int(columns), 0).
 							AxisLimits(0, float64(*seriesLength), min-5, max+5, giu.ConditionAlways).
 							Flags(flags).Plots(lines...).
 							Build()
+						giu.Tooltip(s.help).Build()
 					}))
 
 					// check row
@@ -190,9 +190,9 @@ func profiles(mw *giu.MasterWindow) func() {
 					text := fmt.Sprintf("%s (%s/%s)", name, time.Duration(self).String(), time.Duration(total).String())
 
 					// build tooltip and button
-					giu.Tooltip(text).Build()
-					giu.ProgressBar(float32(self)/float32(total)).Size(length*w, 50).Overlay(text).Build()
 					// giu.Button(text).Size(length*w, 50).Build()
+					giu.ProgressBar(float32(self)/float32(total)).Size(length*w, 50).Overlay(text).Build()
+					giu.Tooltip(text).Build()
 				})
 			}),
 		)
