@@ -36,55 +36,21 @@ func main() {
 	// create window
 	mw := giu.NewMasterWindow(*targetURL, 1400, 900, 0)
 
-	// run scraper
-	go func() {
-		for {
-			// scrape metric
-			err := scrapeMetrics(*targetURL + *metricsPath)
-			if err != nil {
-				println("metrics: " + err.Error())
-			}
+	// run metrics loader
+	go metricsLoader(*targetURL+*metricsPath, *scrapeInterval)
 
-			// update
-			giu.Update()
-
-			// await next interval
-			time.Sleep(*scrapeInterval)
-		}
-	}()
-
-	// run CPU profiler
-	go func() {
-		for {
-			// load profile
-			err := loadProfile("cpu", *targetURL+*cpuProfilePath)
-			if err != nil {
-				println("profile: " + err.Error())
-			}
-
-			// update
-			giu.Update()
-		}
-	}()
-
-	// run heap profiler
-	go func() {
-		for {
-			// load profile
-			err := loadProfile("heap", *targetURL+*heapProfilePath)
-			if err != nil {
-				println("profile: " + err.Error())
-			}
-
-			// update
-			giu.Update()
-		}
-	}()
+	// run profiler loaders
+	go profileLoader("cpu", *targetURL+*cpuProfilePath)
+	go profileLoader("heap", *targetURL+*heapProfilePath)
+	go profileLoader("block", *targetURL+*heapProfilePath)
+	go profileLoader("mutex", *targetURL+*heapProfilePath)
 
 	// get drawers
-	drawMetrics := metrics(mw)
+	drawMetrics := metricsDrawer(mw)
 	drawCPUProfile := profileDrawer(mw, "cpu", "CPU Profile")
 	drawHeapProfile := profileDrawer(mw, "heap", "Heap Profile")
+	drawBlockProfile := profileDrawer(mw, "block", "Block Profile")
+	drawMutexProfile := profileDrawer(mw, "mutex", "Mutex Profile")
 
 	// run ui code
 	mw.Run(func() {
@@ -96,10 +62,41 @@ func main() {
 		drawMetrics()
 		drawCPUProfile()
 		drawHeapProfile()
+		drawBlockProfile()
+		drawMutexProfile()
 	})
 }
 
-func metrics(mw *giu.MasterWindow) func() {
+func metricsLoader(url string, interval time.Duration) {
+	for {
+		// scrape metric
+		err := scrapeMetrics(url)
+		if err != nil {
+			println("metrics: " + err.Error())
+		}
+
+		// update
+		giu.Update()
+
+		// await next interval
+		time.Sleep(interval)
+	}
+}
+
+func profileLoader(name, url string) {
+	for {
+		// load profile
+		err := loadProfile(name, url)
+		if err != nil {
+			println("profile: " + err.Error())
+		}
+
+		// update
+		giu.Update()
+	}
+}
+
+func metricsDrawer(mw *giu.MasterWindow) func() {
 	// prepare config
 	columns := int32(*initColumns)
 
