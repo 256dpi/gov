@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"net/http"
+	"net/http/pprof"
 	"time"
 
 	"github.com/AllenDang/giu"
@@ -10,17 +11,20 @@ import (
 )
 
 var seriesLength = flag.Int("series-length", 100, "the series length")
-var targetURL = flag.String("target-url", "http://0.0.0.0:8080/metrics", "the target URL")
+var targetURL = flag.String("target-url", "http://0.0.0.0:6060/", "the target URL")
+var metricsPath = flag.String("metrics-path", "metrics", "the metrics path")
+var profilePath = flag.String("profile-path", "profile", "the profile path")
 var scrapeInterval = flag.Duration("scrape-interval", 250*time.Millisecond, "the scrape interval")
 var initColumns = flag.Int("columns", 3, "the initial number of columns")
-var metricsAddr = flag.String("metrics-addr", ":8080", "the UI metrics addr")
+var metricsAddr = flag.String("metrics-addr", ":6060", "the UI metrics addr")
 
 func main() {
 	// parse flags
 	flag.Parse()
 
-	// run prometheus
+	// run prometheus and pprof profile endpoint
 	http.Handle("/metrics", promhttp.Handler())
+	http.HandleFunc("/profile", pprof.Profile)
 	go func() {
 		panic(http.ListenAndServe(*metricsAddr, nil))
 	}()
@@ -32,7 +36,7 @@ func main() {
 	go func() {
 		for {
 			// scrape metric families
-			families, err := scrape(*targetURL)
+			families, err := scrape(*targetURL + *metricsPath)
 			if err != nil {
 				panic(err)
 			}
@@ -48,6 +52,16 @@ func main() {
 
 			// await next interval
 			time.Sleep(*scrapeInterval)
+		}
+	}()
+
+	// run profiler
+	go func() {
+		for {
+			prf, err := getProfile(*targetURL + *profilePath)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}()
 
