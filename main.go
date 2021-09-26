@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"image"
-	"image/color"
 	"net/http"
 	"net/http/pprof"
 	"time"
@@ -161,51 +160,23 @@ func profiles(mw *giu.MasterWindow) func() {
 		win.Pos(100, 100)
 		win.Size(float32(mw)*0.7, float32(mh)*0.7)
 
-		// prepare colors
-		text := color.RGBA{R: 242, G: 245, B: 250, A: 255}
-		fill := color.RGBA{R: 51, G: 64, B: 74, A: 255}
-		line := color.RGBA{R: 26, G: 33, B: 39, A: 255}
-
 		// get positions and size
-		_x, _y := win.CurrentPosition()
-		x, y := int(_x), int(_y)
 		w, _ := win.CurrentSize()
-
-		// adjust position and size
-		x += 10
-		y += 30
-		w -= 20
-
-		// get mouse
-		mouse := giu.GetMousePos()
+		x := 10
+		y := 30
+		w -= 30
 
 		// draw
 		win.Layout(
 			giu.Custom(func() {
-				// get canvas
-				canvas := giu.GetCanvas()
-
 				// walk profile
 				walkProfile(func(level int, offset, length float32, name string, value int64) {
-					// get dimensions
-					p1x := x + int(offset*w)
-					p1y := y + level*50
-					p2x := x + int((offset+length)*w)
-					p2y := y + level*50 + 50
+					// set cursor
+					giu.SetCursorPos(image.Pt(x+int(offset*w), y+level*50))
 
-					// determine hover
-					hover := mouse.In(image.Rect(p1x, p1y, p2x, p2y))
-
-					// draw item
-					canvas.AddRectFilled(image.Pt(p1x, p1y), image.Pt(p2x, p2y), fill, 0, 0)
-					canvas.AddRect(image.Pt(p1x, p1y), image.Pt(p2x, p2y), line, 0, 0, 1)
-					canvas.AddText(image.Pt(p1x+5, p1y+5), text, name)
-					canvas.AddText(image.Pt(p1x+5, p1y+25), text, time.Duration(value).String())
-
-					// handle hover
-					if hover {
-						giu.Tooltip(name).Build()
-					}
+					// build tooltip and button
+					giu.Tooltip(name + "\n" + time.Duration(value).String()).Build()
+					giu.Button(name).Size(length*w, 50).Build()
 				})
 			}),
 		)
