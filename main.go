@@ -65,19 +65,36 @@ func main() {
 		}
 	}()
 
-	// prepare config
-	columns := int32(*initColumns)
+	// get drawers
+	drawMetrics := metrics(mw)
 
 	// run ui code
 	mw.Run(func() {
+		drawMetrics()
+	})
+}
+
+func metrics(mw *giu.MasterWindow) func() {
+	// prepare config
+	columns := int32(*initColumns)
+
+	return func() {
+		// get size
 		mw, mh := mw.GetSize()
 
+		// create window
 		win := giu.Window("Metrics")
 		win.Pos(100, 100)
 		win.Size(float32(mw)*0.7, float32(mh)*0.7)
+
+		// get current size
 		w, _ := win.CurrentSize()
+
 		win.Layout(
+			// add columns slider
 			giu.SliderInt("Columns", &columns, 1, 6),
+
+			// add plots
 			giu.Custom(func() {
 				// prepare widgets
 				var widgets []giu.Widget
@@ -125,5 +142,5 @@ func main() {
 				}
 			}),
 		)
-	})
+	}
 }
