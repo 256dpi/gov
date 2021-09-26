@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"sort"
 	"sync"
 
 	"github.com/google/pprof/profile"
@@ -12,7 +13,8 @@ var lastNodeMutex sync.Mutex
 
 type node struct {
 	name   string
-	value  int64
+	self   int64
+	total  int64
 	parent *node
 	nodes  []*node
 }
@@ -37,6 +39,18 @@ func (n *node) push(name string) *node {
 	return node
 }
 
+func (n *node) sort() {
+	// sort nodes
+	sort.Slice(n.nodes, func(i, j int) bool {
+		return n.nodes[i].name < n.nodes[j].name
+	})
+
+	// descend
+	for _, node := range n.nodes {
+		node.sort()
+	}
+}
+
 func getProfile(url string) (*profile.Profile, error) {
 	// get profile
 	res, err := http.Get(url + "?seconds=1")
@@ -59,8 +73,7 @@ func getProfile(url string) (*profile.Profile, error) {
 func convertProfile(prf *profile.Profile) *node {
 	// prepare root
 	root := &node{
-		name:  "#root",
-		value: 1,
+		name: "#root",
 	}
 
 	// convert samples
@@ -79,12 +92,18 @@ func convertProfile(prf *profile.Profile) *node {
 			}
 		}
 
-		// increment value
+		// set self
+		node.self += sample.Value[1]
+
+		// increment total
 		for node != nil {
-			node.value += sample.Value[1]
+			node.total += sample.Value[1]
 			node = node.parent
 		}
 	}
+
+	// sort nodes
+	root.sort()
 
 	// set
 	lastNodeMutex.Lock()
@@ -94,7 +113,7 @@ func convertProfile(prf *profile.Profile) *node {
 	return root
 }
 
-type walkFN func(level int, offset, length float32, name string, value int64)
+type walkFN func(level int, offset, length float32, name string, self, total int64)
 
 func walkProfile(fn walkFN) {
 	// acquire mutex
@@ -104,7 +123,7 @@ func walkProfile(fn walkFN) {
 	// walk last root node
 	if lastNode != nil {
 		// get divisor
-		divisor := float32(lastNode.value)
+		divisor := float32(lastNode.total)
 
 		walkNode(lastNode, 0, 0, divisor, fn)
 	}
@@ -112,10 +131,10 @@ func walkProfile(fn walkFN) {
 
 func walkNode(nd *node, level int, offset, divisor float32, fn walkFN) float32 {
 	// get length
-	length := float32(nd.value) / divisor
+	length := float32(nd.total) / divisor
 
 	// emit node
-	fn(level, offset, length, nd.name, nd.value)
+	fn(level, offset, length, nd.name, nd.self, nd.total)
 
 	// walk children
 	for _, node := range nd.nodes {

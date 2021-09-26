@@ -2,7 +2,9 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"image"
+	"image/color"
 	"net/http"
 	"net/http/pprof"
 	"time"
@@ -175,14 +177,22 @@ func profiles(mw *giu.MasterWindow) func() {
 		// draw
 		win.Layout(
 			giu.Custom(func() {
+				// override style
+				giu.PushStyleColor(giu.StyleColorProgressBarActive, color.RGBA{R: 58, G: 82, B: 99, A: 255})
+				defer giu.PopStyleColor()
+
 				// walk profile
-				walkProfile(func(level int, offset, length float32, name string, value int64) {
+				walkProfile(func(level int, offset, length float32, name string, self, total int64) {
 					// set cursor
 					giu.SetCursorPos(image.Pt(x+int(offset*w), y+level*50))
 
+					// get text
+					text := fmt.Sprintf("%s (%s/%s)", name, time.Duration(self).String(), time.Duration(total).String())
+
 					// build tooltip and button
-					giu.Tooltip(name + "\n" + time.Duration(value).String()).Build()
-					giu.Button(name).Size(length*w, 50).Build()
+					giu.Tooltip(text).Build()
+					giu.ProgressBar(float32(self)/float32(total)).Size(length*w, 50).Overlay(text).Build()
+					// giu.Button(text).Size(length*w, 50).Build()
 				})
 			}),
 		)
