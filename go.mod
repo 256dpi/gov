@@ -1,4 +1,4 @@
-module github.com/256dpi/promview
+module github.com/256dpi/gov
 
 go 1.16
 
