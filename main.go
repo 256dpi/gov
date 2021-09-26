@@ -38,16 +38,10 @@ func main() {
 	// run scraper
 	go func() {
 		for {
-			// scrape metric families
-			families, err := scrape(*targetURL + *metricsPath)
+			// scrape metric
+			err := scrapeMetrics(*targetURL + *metricsPath)
 			if err != nil {
-				panic(err)
-			}
-
-			// ingest metric families
-			err = ingest(families)
-			if err != nil {
-				panic(err)
+				println("metrics: " + err.Error())
 			}
 
 			// update
@@ -61,12 +55,14 @@ func main() {
 	// run profiler
 	go func() {
 		for {
-			prf, err := getProfile(*targetURL + *profilePath)
+			// load profile
+			err := loadProfile(*targetURL + *profilePath)
 			if err != nil {
-				panic(err)
+				println("profile: " + err.Error())
 			}
 
-			convertProfile(prf)
+			// update
+			giu.Update()
 		}
 	}()
 

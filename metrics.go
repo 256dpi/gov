@@ -30,11 +30,11 @@ type series struct {
 	lists map[string]*list
 }
 
-func scrape(url string) ([]dto.MetricFamily, error) {
+func scrapeMetrics(url string) error {
 	// get families
 	res, err := http.Get(url)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// ensure close
@@ -54,15 +54,11 @@ func scrape(url string) ([]dto.MetricFamily, error) {
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return nil, err
+			return err
 		}
 		families = append(families, family)
 	}
 
-	return families, nil
-}
-
-func ingest(families []dto.MetricFamily) error {
 	// acquire mutex
 	mutex.Lock()
 	defer mutex.Unlock()

@@ -51,11 +51,11 @@ func (n *node) sort() {
 	}
 }
 
-func getProfile(url string) (*profile.Profile, error) {
+func loadProfile(url string) error {
 	// get profile
 	res, err := http.Get(url + "?seconds=1")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// ensure close
@@ -64,13 +64,9 @@ func getProfile(url string) (*profile.Profile, error) {
 	// parse profile
 	prf, err := profile.Parse(res.Body)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return prf, nil
-}
-
-func convertProfile(prf *profile.Profile) *node {
 	// prepare root
 	root := &node{
 		name: "#root",
@@ -110,7 +106,7 @@ func convertProfile(prf *profile.Profile) *node {
 	lastNode = root
 	lastNodeMutex.Unlock()
 
-	return root
+	return nil
 }
 
 type walkFN func(level int, offset, length float32, name string, self, total int64)
