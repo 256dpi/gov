@@ -51,7 +51,7 @@ func main() {
 		withMetricsTree(func(tree *metricsNode) {
 			giu.MainMenuBar().Layout(
 				giu.Menu("Metrics").Layout(
-					buildMetricsMenu(tree),
+					buildMetricsMenuItems(tree)...,
 				),
 				giu.Menu("Profiles").Layout(
 					buildProfileMenuItem("cpu", "CPU"),
@@ -86,7 +86,7 @@ func main() {
 	})
 }
 
-func buildMetricsMenu(node *metricsNode) giu.Widget {
+func buildMetricsMenuItems(node *metricsNode) []giu.Widget {
 	// prepare click handler
 	click := func() {
 		if metricWindows[node.name] == nil {
@@ -100,21 +100,23 @@ func buildMetricsMenu(node *metricsNode) giu.Widget {
 
 	// check children
 	if len(node.children) == 0 {
-		return giu.MenuItem(node.name).OnClick(click)
+		return []giu.Widget{giu.MenuItem(node.name).OnClick(click)}
 	}
 
 	// prepare widgets
 	widgets := make([]giu.Widget, 0, 1+len(node.children))
 
 	// add show
-	widgets = append(widgets, giu.MenuItem("Show").OnClick(click))
+	widgets = append(widgets, giu.MenuItem("Show All").OnClick(click))
 
 	// add children
 	for _, child := range node.children {
-		widgets = append(widgets, buildMetricsMenu(child))
+		widgets = append(widgets, giu.Menu(child.name).Layout(
+			buildMetricsMenuItems(child)...,
+		))
 	}
 
-	return giu.Menu(node.name).Layout(widgets...)
+	return widgets
 }
 
 func buildProfileMenuItem(name, title string) *giu.MenuItemWidget {

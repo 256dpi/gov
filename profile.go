@@ -28,7 +28,7 @@ func loadProfile(name, url string) error {
 
 	// prepare root
 	root := &node{
-		name: "#root",
+		name: "root",
 	}
 
 	// convert samples

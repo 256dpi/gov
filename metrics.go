@@ -11,7 +11,7 @@ import (
 )
 
 var metricsMutex sync.RWMutex
-var metricsTree = metricsNode{name: "#root"}
+var metricsTree = metricsNode{name: "root"}
 
 type kind int
 
