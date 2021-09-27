@@ -19,6 +19,7 @@ var heapProfilePath = flag.String("heap-profile-path", "debug/pprof/heap", "the 
 var scrapeInterval = flag.Duration("scrape-interval", 250*time.Millisecond, "the scrape interval")
 var initColumns = flag.Int("columns", 3, "the initial number of columns")
 var selfAddr = flag.String("self-addr", ":7070", "the UI metrics addr")
+var metricsSplitDepth = flag.Int("metrics-split-depth", 3, "the metrics split depth")
 
 var metricWindows = map[string]*metricWindow{}
 var profileWindows = map[string]*profileWindow{}
@@ -111,9 +112,15 @@ func buildMetricsMenuItems(node *metricsNode) []giu.Widget {
 
 	// add children
 	for _, child := range node.children {
-		widgets = append(widgets, giu.Menu(child.name).Layout(
-			buildMetricsMenuItems(child)...,
-		))
+		// get child items
+		items := buildMetricsMenuItems(child)
+
+		// add menu or item
+		if len(items) > 1 {
+			widgets = append(widgets, giu.Menu(child.name).Layout(items...))
+		} else {
+			widgets = append(widgets, items...)
+		}
 	}
 
 	return widgets
@@ -134,7 +141,7 @@ func buildProfileMenuItem(name, title string) *giu.MenuItemWidget {
 func metricsLoader(url string, interval time.Duration) {
 	for {
 		// scrape metric
-		err := scrapeMetrics(url)
+		err := scrapeMetrics(url, *metricsSplitDepth)
 		if err != nil {
 			println("metrics: " + err.Error())
 		}

@@ -39,19 +39,12 @@ func (n *metricsNode) push(name string) *metricsNode {
 	// add child
 	n.children = append(n.children, child)
 
-	return child
-}
-
-func (n *metricsNode) sort() {
 	// sort children
 	sort.Slice(n.children, func(i, j int) bool {
 		return n.children[i].name < n.children[j].name
 	})
 
-	// descend
-	for _, child := range n.children {
-		child.sort()
-	}
+	return child
 }
 
 func (n *metricsNode) walk(fn func(*metricsNode)) {

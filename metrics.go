@@ -28,7 +28,7 @@ type metricSeries struct {
 	lists map[string]*list
 }
 
-func scrapeMetrics(url string) error {
+func scrapeMetrics(url string, splitDepth int) error {
 	// get families
 	res, err := http.Get(url)
 	if err != nil {
@@ -64,7 +64,7 @@ func scrapeMetrics(url string) error {
 	// ingest metrics
 	for _, family := range families {
 		for _, metric := range family.Metric {
-			err := ingestMetric(&family, metric)
+			err := ingestMetric(&family, metric, splitDepth)
 			if err != nil {
 				return err
 			}
@@ -74,7 +74,7 @@ func scrapeMetrics(url string) error {
 	return nil
 }
 
-func ingestMetric(family *dto.MetricFamily, metric *dto.Metric) error {
+func ingestMetric(family *dto.MetricFamily, metric *dto.Metric, splitDepth int) error {
 	// get kind
 	var knd kind
 	switch *family.Type {
@@ -87,7 +87,7 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric) error {
 	}
 
 	// ensure node
-	node := metricsTree.ensure(strings.Split(*family.Name, "_"))
+	node := metricsTree.ensure(strings.SplitN(*family.Name, "_", splitDepth))
 
 	// ensure series
 	if node.series == nil {
