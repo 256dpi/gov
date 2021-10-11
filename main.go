@@ -48,6 +48,13 @@ func main() {
 
 	// run ui code
 	master.Run(func() {
+		// update profile windows
+		for _, win := range profileWindows {
+			win.update()
+		}
+
+		/* draw */
+
 		// main menu
 		withMetricsTree(func(tree *metricsNode) {
 			giu.MainMenuBar().Layout(
@@ -130,9 +137,10 @@ func buildProfileMenuItem(name, title string) *giu.MenuItemWidget {
 	return giu.MenuItem(title).OnClick(func() {
 		if profileWindows[name] == nil {
 			profileWindows[name] = &profileWindow{
-				name:  name,
-				title: title,
-				open:  true,
+				name:   name,
+				title:  title,
+				open:   true,
+				stream: true,
 			}
 		}
 	})

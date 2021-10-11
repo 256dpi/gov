@@ -68,22 +68,22 @@ func loadProfile(name, url string) error {
 	return nil
 }
 
+func getProfile(name string) *node {
+	// acquire mutex
+	profilesMutex.Lock()
+	defer profilesMutex.Unlock()
+
+	return profileNodes[name]
+}
+
 type walkProfileFunc func(level int, offset, length float32, name string, self, total int64)
 
-func walkProfile(name string, fn walkProfileFunc) {
-	// get node
-	profilesMutex.Lock()
-	node := profileNodes[name]
-	profilesMutex.Unlock()
+func walkProfile(node *node, fn walkProfileFunc) {
+	// get divisor
+	divisor := float32(node.total)
 
 	// walk node
-	if node != nil {
-		// get divisor
-		divisor := float32(node.total)
-
-		// walk node
-		walkProfileNode(node, 0, 0, divisor, fn)
-	}
+	walkProfileNode(node, 0, 0, divisor, fn)
 }
 
 func walkProfileNode(nd *node, level int, offset, divisor float32, fn walkProfileFunc) float32 {
