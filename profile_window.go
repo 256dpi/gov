@@ -41,7 +41,6 @@ func (w *profileWindow) draw(mw *giu.MasterWindow) {
 				text := fmt.Sprintf("%s (%s/%s)", name, time.Duration(self).String(), time.Duration(total).String())
 
 				// build tooltip and button
-				// giu.Button(text).Size(length*w, 50).Build()
 				giu.ProgressBar(float32(self)/float32(total)).Size(length*width, 30).Overlay(text).Build()
 				giu.Tooltip(text).Build()
 			})
