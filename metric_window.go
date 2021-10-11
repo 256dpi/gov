@@ -10,14 +10,18 @@ type metricWindow struct {
 
 func (w *metricWindow) draw(m *giu.MasterWindow) {
 	// create window
-	win := newWindow(m, w.node.name).IsOpen(&w.open)
+	win := newWindow(m, w.node.name).Flags(giu.WindowFlagsMenuBar).IsOpen(&w.open)
 
 	// get size
 	width, _ := win.CurrentSize()
 
 	win.Layout(
-		// add columns slider
-		giu.SliderInt("Columns", &w.cols, 1, 6),
+		// add menu bar
+		giu.MenuBar().Layout(
+			giu.Menu("View").Layout(
+				giu.SliderInt("Columns", &w.cols, 1, 4),
+			),
+		),
 
 		// add plots
 		giu.Custom(func() {
@@ -46,7 +50,7 @@ func (w *metricWindow) draw(m *giu.MasterWindow) {
 				// append widget
 				widgets = append(widgets, giu.Custom(func() {
 					giu.Plot(s.name).
-						Size((int(width)-(int(w.cols)*15))/int(w.cols), 0).
+						Size((int(width)-20-(int(w.cols)*8))/int(w.cols), 0).
 						AxisLimits(0, float64(*seriesLength), min-5, max+5, giu.ConditionAlways).
 						Flags(flags).Plots(lines...).
 						Build()
