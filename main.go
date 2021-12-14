@@ -17,6 +17,7 @@ var metricsPath = flag.String("metrics-path", "metrics", "the metrics path")
 var cpuProfilePath = flag.String("cpu-profile-path", "debug/pprof/profile", "the CPU profile path")
 var heapProfilePath = flag.String("heap-profile-path", "debug/pprof/heap", "the heap profile path")
 var scrapeInterval = flag.Duration("scrape-interval", 250*time.Millisecond, "the scrape interval")
+var profileInterval = flag.Duration("profile-interval", time.Second, "the profile interval")
 var initColumns = flag.Int("columns", 3, "the initial number of columns")
 var selfAddr = flag.String("self-addr", ":7070", "the UI metrics addr")
 var metricsSplitDepth = flag.Int("metrics-split-depth", 3, "the metrics split depth")
@@ -164,8 +165,14 @@ func metricsLoader(url string, interval time.Duration) {
 
 func profileLoader(name, url string) {
 	for {
+		// check window
+		if profileWindows[name] == nil {
+			time.Sleep(*profileInterval)
+			continue
+		}
+
 		// load profile
-		err := loadProfile(name, url)
+		err := loadProfile(name, url, *profileInterval)
 		if err != nil {
 			println("profile: " + err.Error())
 		}

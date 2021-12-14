@@ -2,7 +2,9 @@ package main
 
 import (
 	"net/http"
+	"strconv"
 	"sync"
+	"time"
 
 	"github.com/google/pprof/profile"
 )
@@ -10,9 +12,15 @@ import (
 var profileNodes = map[string]*node{}
 var profilesMutex sync.Mutex
 
-func loadProfile(name, url string) error {
+func loadProfile(name, url string, duration time.Duration) error {
+	// get seconds
+	seconds := int(duration / time.Second)
+	if seconds < 1 {
+		seconds = 1
+	}
+
 	// get profile
-	res, err := http.Get(url + "?seconds=1")
+	res, err := http.Get(url + "?seconds=" + strconv.Itoa(seconds))
 	if err != nil {
 		return err
 	}
