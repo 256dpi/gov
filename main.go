@@ -15,6 +15,7 @@ var seriesLength = flag.Int("series-length", 100, "the series length")
 var targetURL = flag.String("target-url", "http://0.0.0.0:6060/", "the target URL")
 var metricsPath = flag.String("metrics-path", "metrics", "the metrics path")
 var cpuProfilePath = flag.String("cpu-profile-path", "debug/pprof/profile", "the CPU profile path")
+var allocsProfilePath = flag.String("allocs-profile-path", "debug/pprof/allocs", "the allocs profile path")
 var heapProfilePath = flag.String("heap-profile-path", "debug/pprof/heap", "the heap profile path")
 var blockProfilePath = flag.String("block-profile-path", "debug/pprof/block", "the block profile path")
 var mutexProfilePath = flag.String("mutex-profile-path", "debug/pprof/mutex", "the mutex profile path")
@@ -45,6 +46,7 @@ func main() {
 
 	// run profiler loaders
 	go profileLoader("cpu", *targetURL+*cpuProfilePath)
+	go profileLoader("allocs", *targetURL+*allocsProfilePath)
 	go profileLoader("heap", *targetURL+*heapProfilePath)
 	go profileLoader("block", *targetURL+*blockProfilePath)
 	go profileLoader("mutex", *targetURL+*mutexProfilePath)
@@ -66,6 +68,7 @@ func main() {
 				),
 				giu.Menu("Profiles").Layout(
 					buildProfileMenuItem("cpu", "CPU"),
+					buildProfileMenuItem("allocs", "Allocs"),
 					buildProfileMenuItem("heap", "Heap"),
 					buildProfileMenuItem("block", "Block"),
 					buildProfileMenuItem("mutex", "Mutex"),
