@@ -16,6 +16,8 @@ var targetURL = flag.String("target-url", "http://0.0.0.0:6060/", "the target UR
 var metricsPath = flag.String("metrics-path", "metrics", "the metrics path")
 var cpuProfilePath = flag.String("cpu-profile-path", "debug/pprof/profile", "the CPU profile path")
 var heapProfilePath = flag.String("heap-profile-path", "debug/pprof/heap", "the heap profile path")
+var blockProfilePath = flag.String("block-profile-path", "debug/pprof/block", "the block profile path")
+var mutexProfilePath = flag.String("mutex-profile-path", "debug/pprof/mutex", "the mutex profile path")
 var scrapeInterval = flag.Duration("scrape-interval", 250*time.Millisecond, "the scrape interval")
 var profileInterval = flag.Duration("profile-interval", time.Second, "the profile interval")
 var initColumns = flag.Int("columns", 3, "the initial number of columns")
@@ -44,8 +46,8 @@ func main() {
 	// run profiler loaders
 	go profileLoader("cpu", *targetURL+*cpuProfilePath)
 	go profileLoader("heap", *targetURL+*heapProfilePath)
-	go profileLoader("block", *targetURL+*heapProfilePath)
-	go profileLoader("mutex", *targetURL+*heapProfilePath)
+	go profileLoader("block", *targetURL+*blockProfilePath)
+	go profileLoader("mutex", *targetURL+*mutexProfilePath)
 
 	// run ui code
 	master.Run(func() {
