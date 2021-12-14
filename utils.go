@@ -1,6 +1,10 @@
 package main
 
-import "github.com/AllenDang/giu"
+import (
+	"fmt"
+
+	"github.com/AllenDang/giu"
+)
 
 func newWindow(m *giu.MasterWindow, title string) *giu.WindowWidget {
 	// get size
@@ -12,4 +16,18 @@ func newWindow(m *giu.MasterWindow, title string) *giu.WindowWidget {
 	win.Size(float32(mw-200), float32(mh-200))
 
 	return win
+}
+
+func fmtBytes(b int64) string {
+	const unit = 1000
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB",
+		float64(b)/float64(div), "kMGTPE"[exp])
 }

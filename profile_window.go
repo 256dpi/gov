@@ -64,7 +64,13 @@ func (w *profileWindow) draw(mw *giu.MasterWindow) {
 				giu.SetCursorPos(image.Pt(posX+int(offset*width), posY+level*30))
 
 				// get text
-				text := fmt.Sprintf("%s (%s/%s)", name, time.Duration(self).String(), time.Duration(total).String())
+				var text string
+				switch w.name {
+				case "cpu", "block", "mutex":
+					text = fmt.Sprintf("%s (%s/%s)", name, time.Duration(self).String(), time.Duration(total).String())
+				case "allocs", "heap":
+					text = fmt.Sprintf("%s (%s/%s)", name, fmtBytes(self), fmtBytes(total))
+				}
 
 				// build tooltip and button
 				giu.ProgressBar(float32(self)/float32(total)).Size(length*width, 30).Overlay(text).Build()

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"sync"
@@ -12,7 +13,7 @@ import (
 var profileNodes = map[string]*node{}
 var profilesMutex sync.Mutex
 
-func loadProfile(name, url string, duration time.Duration) error {
+func loadProfile(name, sample, url string, duration time.Duration) error {
 	// get seconds
 	seconds := int(duration / time.Second)
 	if seconds < 1 {
@@ -39,6 +40,17 @@ func loadProfile(name, url string, duration time.Duration) error {
 		name: "root",
 	}
 
+	// get sample index
+	sampleIndex := -1
+	for i, st := range prf.SampleType {
+		if st.Type == sample {
+			sampleIndex = i
+		}
+	}
+	if sampleIndex < 0 {
+		return fmt.Errorf("sample not found")
+	}
+
 	// convert samples
 	for _, sample := range prf.Sample {
 		// prepare node
@@ -56,11 +68,11 @@ func loadProfile(name, url string, duration time.Duration) error {
 		}
 
 		// set self
-		node.self += sample.Value[1]
+		node.self += sample.Value[sampleIndex]
 
 		// increment total
 		for node != nil {
-			node.total += sample.Value[1]
+			node.total += sample.Value[sampleIndex]
 			node = node.parent
 		}
 	}

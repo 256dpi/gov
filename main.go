@@ -45,11 +45,11 @@ func main() {
 	go metricsLoader(*targetURL + *metricsPath)
 
 	// run profiler loaders
-	go profileLoader("cpu", *targetURL+*cpuProfilePath)
-	go profileLoader("allocs", *targetURL+*allocsProfilePath)
-	go profileLoader("heap", *targetURL+*heapProfilePath)
-	go profileLoader("block", *targetURL+*blockProfilePath)
-	go profileLoader("mutex", *targetURL+*mutexProfilePath)
+	go profileLoader("cpu", "cpu", *targetURL+*cpuProfilePath)
+	go profileLoader("allocs", "alloc_space", *targetURL+*allocsProfilePath)
+	go profileLoader("heap", "inuse_space", *targetURL+*heapProfilePath)
+	go profileLoader("block", "delay", *targetURL+*blockProfilePath)
+	go profileLoader("mutex", "delay", *targetURL+*mutexProfilePath)
 
 	// run ui code
 	master.Run(func() {
@@ -198,7 +198,7 @@ func metricsLoader(url string) {
 	}
 }
 
-func profileLoader(name, url string) {
+func profileLoader(name, sample, url string) {
 	for {
 		// check window
 		if profileWindows[name] == nil {
@@ -207,7 +207,7 @@ func profileLoader(name, url string) {
 		}
 
 		// load profile
-		err := loadProfile(name, url, *profileInterval)
+		err := loadProfile(name, sample, url, *profileInterval)
 		if err != nil {
 			println("profile: " + err.Error())
 		}
