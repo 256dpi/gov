@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -77,13 +78,18 @@ func scrapeMetrics(url string, splitDepth int) error {
 func ingestMetric(family *dto.MetricFamily, metric *dto.Metric, splitDepth int) error {
 	// get kind
 	var knd kind
-	switch *family.Type {
+	switch family.GetType() {
 	case dto.MetricType_COUNTER:
 		knd = counter
 	case dto.MetricType_GAUGE, dto.MetricType_UNTYPED:
 		knd = gauge
 	case dto.MetricType_SUMMARY, dto.MetricType_HISTOGRAM:
 		return nil
+	}
+
+	// check name
+	if family.Name == nil {
+		return fmt.Errorf("missing name")
 	}
 
 	// ensure node
@@ -94,7 +100,7 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric, splitDepth int) 
 		node.series = &metricSeries{
 			kind:  knd,
 			name:  *family.Name,
-			help:  *family.Help,
+			help:  family.GetHelp(),
 			lists: map[string]*list{},
 		}
 	}
@@ -133,13 +139,14 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric, splitDepth int) 
 	// add value
 	list.add(value, knd == counter)
 
-	// metric.Summary.SampleSum
-	// metric.Summary.SampleSum
-	// metric.Summary.Quantile
-	// metric.Histogram.SampleCount
-	// metric.Histogram.SampleSum
-	// metric.Histogram.Bucket
-	// metric.TimestampMs
+	// TODO: Implement:
+	//  metric.Summary.SampleSum
+	//  metric.Summary.SampleSum
+	//  metric.Summary.Quantile
+	//  metric.Histogram.SampleCount
+	//  metric.Histogram.SampleSum
+	//  metric.Histogram.Bucket
+	//  metric.TimestampMs
 
 	return nil
 }
