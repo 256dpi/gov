@@ -20,7 +20,7 @@ var heapProfilePath = flag.String("heap-profile-path", "debug/pprof/heap", "the 
 var blockProfilePath = flag.String("block-profile-path", "debug/pprof/block", "the block profile path")
 var mutexProfilePath = flag.String("mutex-profile-path", "debug/pprof/mutex", "the mutex profile path")
 var scrapeInterval = flag.Duration("scrape-interval", 250*time.Millisecond, "the scrape interval")
-var profileInterval = flag.Duration("profile-interval", 5 * time.Second, "the profile interval")
+var profileInterval = flag.Duration("profile-interval", 2*time.Second, "the profile interval")
 var initColumns = flag.Int("columns", 3, "the initial number of columns")
 var selfAddr = flag.String("self-addr", ":7070", "the UI metrics addr")
 var metricsSplitDepth = flag.Int("metrics-split-depth", 3, "the metrics split depth")
@@ -42,7 +42,7 @@ func main() {
 	master := giu.NewMasterWindow(*targetURL, 1400, 900, 0)
 
 	// run metrics loader
-	go metricsLoader(*targetURL+*metricsPath, *scrapeInterval)
+	go metricsLoader(*targetURL + *metricsPath)
 
 	// run profiler loaders
 	go profileLoader("cpu", *targetURL+*cpuProfilePath)
@@ -72,6 +72,36 @@ func main() {
 					buildProfileMenuItem("heap", "Heap"),
 					buildProfileMenuItem("block", "Block"),
 					buildProfileMenuItem("mutex", "Mutex"),
+				),
+				giu.Menu("Settings").Layout(
+					giu.Menu("Scrape Interval").Layout(
+						giu.MenuItem("100ms").OnClick(func() {
+							*scrapeInterval = 100 * time.Millisecond
+						}),
+						giu.MenuItem("250ms").OnClick(func() {
+							*scrapeInterval = 250 * time.Millisecond
+						}),
+						giu.MenuItem("500ms").OnClick(func() {
+							*scrapeInterval = 500 * time.Millisecond
+						}),
+						giu.MenuItem("1000ms").OnClick(func() {
+							*scrapeInterval = 1000 * time.Millisecond
+						}),
+					),
+					giu.Menu("Profile Interval").Layout(
+						giu.MenuItem("1s").OnClick(func() {
+							*profileInterval = 1 * time.Second
+						}),
+						giu.MenuItem("2s").OnClick(func() {
+							*profileInterval = 2 * time.Second
+						}),
+						giu.MenuItem("3s").OnClick(func() {
+							*profileInterval = 3 * time.Second
+						}),
+						giu.MenuItem("5s").OnClick(func() {
+							*profileInterval = 5 * time.Second
+						}),
+					),
 				),
 			).Build()
 		})
@@ -152,7 +182,7 @@ func buildProfileMenuItem(name, title string) *giu.MenuItemWidget {
 	})
 }
 
-func metricsLoader(url string, interval time.Duration) {
+func metricsLoader(url string) {
 	for {
 		// scrape metric
 		err := scrapeMetrics(url, *metricsSplitDepth)
@@ -164,7 +194,7 @@ func metricsLoader(url string, interval time.Duration) {
 		giu.Update()
 
 		// await next interval
-		time.Sleep(interval)
+		time.Sleep(*scrapeInterval)
 	}
 }
 
