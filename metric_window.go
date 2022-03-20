@@ -1,6 +1,9 @@
 package main
 
-import "github.com/AllenDang/giu"
+import (
+	"github.com/AllenDang/giu"
+	"github.com/dustin/go-humanize"
+)
 
 type metricWindow struct {
 	node *metricsNode
@@ -40,6 +43,9 @@ func (w *metricWindow) draw(m *giu.MasterWindow) {
 
 				// get min and max
 				min, max := minMax(data...)
+				r := (max - min) * 0.1
+				min -= r
+				max += r
 
 				// prepare flags
 				var flags giu.PlotFlags
@@ -47,11 +53,27 @@ func (w *metricWindow) draw(m *giu.MasterWindow) {
 					flags = giu.PlotFlagsNoLegend
 				}
 
+				// generate tick values
+				r = max - min
+				ticks := []giu.PlotTicker{
+					{Position: min},
+					{Position: min + r/3},
+					{Position: min + r/3*2},
+					{Position: max},
+				}
+
+				// set labels
+				for i := range ticks {
+					ticks[i].Label = humanize.SIWithDigits(ticks[i].Position, 2, "")
+				}
+
 				// append widget
 				widgets = append(widgets, giu.Custom(func() {
 					giu.Plot(s.name).
 						Size((int(width)-20-(int(w.cols)*8))/int(w.cols), 0).
-						AxisLimits(0, float64(*seriesLength), min-5, max+5, giu.ConditionAlways).
+						AxisLimits(0, float64(*seriesLength), min, max, giu.ConditionAlways).
+						XAxeFlags(giu.PlotAxisFlagsNoTickLabels).
+						YTicks(ticks, false, 0).
 						Flags(flags).Plots(lines...).
 						Build()
 					giu.Tooltip(s.help).Build()
