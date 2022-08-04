@@ -30,6 +30,11 @@ func (l *list) addMean(sum, count float64) {
 }
 
 func (l *list) add(value float64) {
+	// handle not a number
+	if math.IsNaN(value) {
+		value = 0
+	}
+
 	// write values
 	l.data[l.pos] = value
 	l.data[l.length+l.pos] = value
