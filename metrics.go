@@ -76,46 +76,9 @@ func scrapeMetrics(url string, splitDepth int) error {
 }
 
 func ingestMetric(family *dto.MetricFamily, metric *dto.Metric, splitDepth int) error {
-	// get kind
-	var knd kind
-	switch family.GetType() {
-	case dto.MetricType_COUNTER:
-		knd = counter
-	case dto.MetricType_GAUGE, dto.MetricType_UNTYPED:
-		knd = gauge
-	case dto.MetricType_SUMMARY, dto.MetricType_HISTOGRAM:
-		return nil
-	}
-
 	// check name
 	if family.Name == nil {
 		return fmt.Errorf("missing name")
-	}
-
-	// ensure node
-	node := metricsTree.ensure(strings.SplitN(*family.Name, "_", splitDepth))
-
-	// ensure series
-	if node.series == nil {
-		node.series = &metricSeries{
-			kind:  knd,
-			name:  *family.Name,
-			help:  family.GetHelp(),
-			lists: map[string]*list{},
-		}
-	}
-
-	// get value
-	var value float64
-	switch knd {
-	case gauge:
-		if metric.Gauge != nil {
-			value = *metric.Gauge.Value
-		} else if metric.Untyped != nil {
-			value = *metric.Untyped.Value
-		}
-	case counter:
-		value = *metric.Counter.Value
 	}
 
 	// get dimension
@@ -128,6 +91,45 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric, splitDepth int) 
 		dim = strings.Join(pairs, " ")
 	}
 
+	// add metric
+	switch family.GetType() {
+	case dto.MetricType_COUNTER:
+		addMetric(counter, *family.Name, family.GetHelp(), dim, *metric.Counter.Value, splitDepth)
+	case dto.MetricType_GAUGE:
+		addMetric(gauge, *family.Name, family.GetHelp(), dim, *metric.Gauge.Value, splitDepth)
+	case dto.MetricType_UNTYPED:
+		addMetric(gauge, *family.Name, family.GetHelp(), dim, *metric.Untyped.Value, splitDepth)
+	case dto.MetricType_SUMMARY:
+		addMetric(counter, *family.Name+":count", family.GetHelp(), dim, float64(*metric.Summary.SampleCount), splitDepth)
+		addMetric(counter, *family.Name+":sum", family.GetHelp(), dim, *metric.Summary.SampleSum, splitDepth)
+		for _, bucket := range metric.Summary.Quantile {
+			addMetric(counter, *family.Name+":"+f2s(*bucket.Quantile), family.GetHelp(), dim, *bucket.Value, splitDepth)
+		}
+	case dto.MetricType_HISTOGRAM:
+		addMetric(counter, *family.Name+":count", family.GetHelp(), dim, float64(*metric.Histogram.SampleCount), splitDepth)
+		addMetric(counter, *family.Name+":sum", family.GetHelp(), dim, *metric.Histogram.SampleSum, splitDepth)
+		for _, bucket := range metric.Histogram.Bucket {
+			addMetric(counter, *family.Name+":"+f2s(*bucket.UpperBound), family.GetHelp(), dim, float64(*bucket.CumulativeCount), splitDepth)
+		}
+	}
+
+	return nil
+}
+
+func addMetric(knd kind, name, help, dim string, value float64, splitDepth int) {
+	// ensure node
+	node := metricsTree.ensure(strings.SplitN(name, "_", splitDepth))
+
+	// ensure series
+	if node.series == nil {
+		node.series = &metricSeries{
+			kind:  knd,
+			name:  name,
+			help:  help,
+			lists: map[string]*list{},
+		}
+	}
+
 	// get list
 	list, ok := node.series.lists[dim]
 	if !ok {
@@ -137,18 +139,7 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric, splitDepth int) 
 	}
 
 	// add value
-	list.add(value, knd == counter)
-
-	// TODO: Implement:
-	//  metric.Summary.SampleSum
-	//  metric.Summary.SampleSum
-	//  metric.Summary.Quantile
-	//  metric.Histogram.SampleCount
-	//  metric.Histogram.SampleSum
-	//  metric.Histogram.Bucket
-	//  metric.TimestampMs
-
-	return nil
+	list.add(value, knd != gauge)
 }
 
 func walkMetrics(node *metricsNode, fn func(*metricSeries)) {

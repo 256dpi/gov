@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/AllenDang/giu"
 )
@@ -30,4 +31,8 @@ func fmtBytes(b int64) string {
 	}
 	return fmt.Sprintf("%.1f %cB",
 		float64(b)/float64(div), "kMGTPE"[exp])
+}
+
+func f2s(f float64) string {
+	return strconv.FormatFloat(f, 'f', -1, 64)
 }
