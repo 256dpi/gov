@@ -22,7 +22,6 @@ const (
 )
 
 type metricSeries struct {
-	kind  kind
 	name  string
 	help  string
 	dims  []string
@@ -94,36 +93,39 @@ func ingestMetric(family *dto.MetricFamily, metric *dto.Metric, splitDepth int) 
 	// add metric
 	switch family.GetType() {
 	case dto.MetricType_COUNTER:
-		addMetric(counter, *family.Name, family.GetHelp(), dim, *metric.Counter.Value, splitDepth)
+		getList(*family.Name, family.GetHelp(), dim, splitDepth).addDiff(*metric.Counter.Value)
 	case dto.MetricType_GAUGE:
-		addMetric(gauge, *family.Name, family.GetHelp(), dim, *metric.Gauge.Value, splitDepth)
+		getList(*family.Name, family.GetHelp(), dim, splitDepth).add(*metric.Gauge.Value)
 	case dto.MetricType_UNTYPED:
-		addMetric(gauge, *family.Name, family.GetHelp(), dim, *metric.Untyped.Value, splitDepth)
+		getList(*family.Name, family.GetHelp(), dim, splitDepth).add(*metric.Gauge.Value)
 	case dto.MetricType_SUMMARY:
-		addMetric(counter, *family.Name+":count", family.GetHelp(), dim, float64(*metric.Summary.SampleCount), splitDepth)
-		addMetric(counter, *family.Name+":sum", family.GetHelp(), dim, *metric.Summary.SampleSum, splitDepth)
+		getList(*family.Name+":count", family.GetHelp(), dim, splitDepth).addDiff(float64(*metric.Summary.SampleCount))
+		getList(*family.Name+":mean", family.GetHelp(), dim, splitDepth).addMean(*metric.Summary.SampleSum, float64(*metric.Summary.SampleCount))
 		for _, bucket := range metric.Summary.Quantile {
-			addMetric(counter, *family.Name+":"+f2s(*bucket.Quantile), family.GetHelp(), dim, *bucket.Value, splitDepth)
+			getList(*family.Name+":"+f2s(*bucket.Quantile), family.GetHelp(), dim, splitDepth).add(*bucket.Value)
 		}
 	case dto.MetricType_HISTOGRAM:
-		addMetric(counter, *family.Name+":count", family.GetHelp(), dim, float64(*metric.Histogram.SampleCount), splitDepth)
-		addMetric(counter, *family.Name+":sum", family.GetHelp(), dim, *metric.Histogram.SampleSum, splitDepth)
-		for _, bucket := range metric.Histogram.Bucket {
-			addMetric(counter, *family.Name+":"+f2s(*bucket.UpperBound), family.GetHelp(), dim, float64(*bucket.CumulativeCount), splitDepth)
+		getList(*family.Name+":count", family.GetHelp(), dim, splitDepth).addDiff(float64(*metric.Histogram.SampleCount))
+		getList(*family.Name+":mean", family.GetHelp(), dim, splitDepth).addMean(*metric.Histogram.SampleSum, float64(*metric.Histogram.SampleCount))
+		for i, bucket := range metric.Histogram.Bucket {
+			count := *bucket.CumulativeCount
+			if i > 0 {
+				count -= *metric.Histogram.Bucket[i-1].CumulativeCount
+			}
+			getList(*family.Name+":"+f2s(*bucket.UpperBound), family.GetHelp(), dim, splitDepth).addDiff(float64(count))
 		}
 	}
 
 	return nil
 }
 
-func addMetric(knd kind, name, help, dim string, value float64, splitDepth int) {
+func getList(name, help, dim string, splitDepth int) *list {
 	// ensure node
 	node := metricsTree.ensure(strings.SplitN(name, "_", splitDepth))
 
 	// ensure series
 	if node.series == nil {
 		node.series = &metricSeries{
-			kind:  knd,
 			name:  name,
 			help:  help,
 			lists: map[string]*list{},
@@ -138,8 +140,7 @@ func addMetric(knd kind, name, help, dim string, value float64, splitDepth int) 
 		node.series.dims = append(node.series.dims, dim)
 	}
 
-	// add value
-	list.add(value, knd != gauge)
+	return list
 }
 
 func walkMetrics(node *metricsNode, fn func(*metricSeries)) {

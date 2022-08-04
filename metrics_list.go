@@ -3,10 +3,12 @@ package main
 import "math"
 
 type list struct {
-	length int
-	data   []float64
-	pos    int
-	last   float64
+	length    int
+	data      []float64
+	pos       int
+	lastValue float64
+	lastSum   float64
+	lastCount float64
 }
 
 func newList(length int) *list {
@@ -16,17 +18,21 @@ func newList(length int) *list {
 	}
 }
 
-func (l *list) add(value float64, diff bool) {
-	// get difference
-	n := value
-	if diff {
-		n -= l.last
-	}
+func (l *list) addDiff(value float64) {
+	l.add(value - l.lastValue)
+	l.lastValue = value
+}
 
+func (l *list) addMean(sum, count float64) {
+	l.add((sum - l.lastSum) / (count - l.lastCount))
+	l.lastSum = sum
+	l.lastCount = count
+}
+
+func (l *list) add(value float64) {
 	// write values
-	l.data[l.pos] = n
-	l.data[l.length+l.pos] = n
-	l.last = value
+	l.data[l.pos] = value
+	l.data[l.length+l.pos] = value
 
 	// increment position
 	l.pos++
