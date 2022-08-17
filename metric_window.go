@@ -22,7 +22,7 @@ func (w *metricWindow) draw(m *giu.MasterWindow) {
 		// add menu bar
 		giu.MenuBar().Layout(
 			giu.Menu("View").Layout(
-				giu.SliderInt("Columns", &w.cols, 1, 4),
+				giu.SliderInt(&w.cols, 1, 4).Label("Columns"),
 			),
 		),
 
