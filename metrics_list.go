@@ -6,6 +6,7 @@ type list struct {
 	length    int
 	data      []float64
 	pos       int
+	hasLast   bool
 	lastValue float64
 	lastSum   float64
 	lastCount float64
@@ -19,7 +20,10 @@ func newList(length int) *list {
 }
 
 func (l *list) addDiff(value float64) {
-	l.add(value - l.lastValue)
+	if l.hasLast {
+		l.add(value - l.lastValue)
+	}
+	l.hasLast = true
 	l.lastValue = value
 }
 
