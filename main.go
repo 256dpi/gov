@@ -9,6 +9,7 @@ import (
 	"github.com/AllenDang/giu"
 	"github.com/go-gl/gl/v3.2-core/gl"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/samber/lo"
 )
 
 var seriesLength = flag.Int("series-length", 100, "the series length")
@@ -51,6 +52,22 @@ func main() {
 	go profileLoader("block", "delay", *targetURL+*blockProfilePath)
 	go profileLoader("mutex", "delay", *targetURL+*mutexProfilePath)
 
+	// prepare scrape intervals
+	scrapeIntervals := []time.Duration{
+		100 * time.Millisecond,
+		250 * time.Millisecond,
+		500 * time.Millisecond,
+		1 * time.Second,
+	}
+
+	// prepare profile intervals
+	profileIntervals := []time.Duration{
+		1 * time.Second,
+		2 * time.Second,
+		5 * time.Second,
+		10 * time.Second,
+	}
+
 	// run ui code
 	master.Run(func() {
 		// update profile windows
@@ -75,32 +92,18 @@ func main() {
 				),
 				giu.Menu("Settings").Layout(
 					giu.Menu("Scrape Interval").Layout(
-						giu.MenuItem("100ms").OnClick(func() {
-							*scrapeInterval = 100 * time.Millisecond
-						}),
-						giu.MenuItem("250ms").OnClick(func() {
-							*scrapeInterval = 250 * time.Millisecond
-						}),
-						giu.MenuItem("500ms").OnClick(func() {
-							*scrapeInterval = 500 * time.Millisecond
-						}),
-						giu.MenuItem("1000ms").OnClick(func() {
-							*scrapeInterval = 1000 * time.Millisecond
-						}),
+						lo.Map(scrapeIntervals, func(interval time.Duration, _ int) giu.Widget {
+							return giu.MenuItem(interval.String()).Selected(*scrapeInterval == interval).OnClick(func() {
+								*scrapeInterval = interval
+							})
+						})...,
 					),
 					giu.Menu("Profile Interval").Layout(
-						giu.MenuItem("1s").OnClick(func() {
-							*profileInterval = 1 * time.Second
-						}),
-						giu.MenuItem("2s").OnClick(func() {
-							*profileInterval = 2 * time.Second
-						}),
-						giu.MenuItem("3s").OnClick(func() {
-							*profileInterval = 3 * time.Second
-						}),
-						giu.MenuItem("5s").OnClick(func() {
-							*profileInterval = 5 * time.Second
-						}),
+						lo.Map(profileIntervals, func(interval time.Duration, _ int) giu.Widget {
+							return giu.MenuItem(interval.String()).Selected(*profileInterval == interval).OnClick(func() {
+								*profileInterval = interval
+							})
+						})...,
 					),
 				),
 			).Build()
