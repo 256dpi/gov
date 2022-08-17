@@ -48,9 +48,9 @@ func (w *metricWindow) draw(m *giu.MasterWindow) {
 				max += r
 
 				// prepare flags
-				var flags giu.PlotFlags
+				flags := giu.PlotFlagsCrosshairs
 				if len(s.dims) == 1 && s.dims[0] == "default" {
-					flags = giu.PlotFlagsNoLegend
+					flags |= giu.PlotFlagsNoLegend
 				}
 
 				// generate tick values
