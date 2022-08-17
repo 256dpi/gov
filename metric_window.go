@@ -6,9 +6,10 @@ import (
 )
 
 type metricWindow struct {
-	node *metricsNode
-	cols int32
-	open bool
+	node  *metricsNode
+	cols  int32
+	inter bool
+	open  bool
 }
 
 func (w *metricWindow) draw(m *giu.MasterWindow) {
@@ -21,9 +22,8 @@ func (w *metricWindow) draw(m *giu.MasterWindow) {
 	win.Layout(
 		// add menu bar
 		giu.MenuBar().Layout(
-			giu.Menu("View").Layout(
-				giu.SliderInt(&w.cols, 1, 4).Label("Columns"),
-			),
+			giu.Checkbox("Interactive", &w.inter),
+			giu.SliderInt(&w.cols, 1, 4).Size(200).Label("Columns"),
 		),
 
 		// add plots
@@ -47,10 +47,10 @@ func (w *metricWindow) draw(m *giu.MasterWindow) {
 				min -= r
 				max += r
 
-				// prepare flags
-				flags := giu.PlotFlagsCrosshairs
+				// prepare plot flags
+				plotFlags := giu.PlotFlagsCrosshairs
 				if len(s.dims) == 1 && s.dims[0] == "default" {
-					flags |= giu.PlotFlagsNoLegend
+					plotFlags |= giu.PlotFlagsNoLegend
 				}
 
 				// generate tick values
@@ -67,14 +67,23 @@ func (w *metricWindow) draw(m *giu.MasterWindow) {
 					ticks[i].Label = humanize.SIWithDigits(ticks[i].Position, 2, "")
 				}
 
+				// prepare axis flags and condition
+				axisFlags := giu.PlotAxisFlagsAutoFit
+				condition := giu.ConditionAlways
+				if w.inter {
+					axisFlags = 0
+					condition = giu.ConditionOnce
+				}
+
 				// append widget
 				widgets = append(widgets, giu.Custom(func() {
 					giu.Plot(s.name).
 						Size((int(width)-20-(int(w.cols)*8))/int(w.cols), 0).
-						AxisLimits(0, float64(*seriesLength), min, max, giu.ConditionAlways).
-						XAxeFlags(giu.PlotAxisFlagsNoTickLabels).
+						AxisLimits(0, float64(*seriesLength), min, max, condition).
+						XAxeFlags(giu.PlotAxisFlagsNoTickLabels|giu.PlotAxisFlagsAutoFit).
+						YAxeFlags(axisFlags, axisFlags, axisFlags).
 						YTicks(ticks, false, 0).
-						Flags(flags).Plots(lines...).
+						Flags(plotFlags).Plots(lines...).
 						Build()
 					giu.Tooltip(s.help).Build()
 				}))
