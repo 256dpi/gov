@@ -4,6 +4,7 @@ import (
 	"flag"
 	"net/http"
 	_ "net/http/pprof"
+	"strings"
 	"time"
 
 	"github.com/AllenDang/giu"
@@ -13,17 +14,16 @@ import (
 )
 
 var seriesLength = flag.Int("series-length", 100, "the series length")
-var targetURL = flag.String("target-url", "http://0.0.0.0:6060/", "the target URL")
-var metricsPath = flag.String("metrics-path", "metrics", "the metrics path")
-var cpuProfilePath = flag.String("cpu-profile-path", "debug/pprof/profile", "the CPU profile path")
-var allocsProfilePath = flag.String("allocs-profile-path", "debug/pprof/allocs", "the allocs profile path")
-var heapProfilePath = flag.String("heap-profile-path", "debug/pprof/heap", "the heap profile path")
-var blockProfilePath = flag.String("block-profile-path", "debug/pprof/block", "the block profile path")
-var mutexProfilePath = flag.String("mutex-profile-path", "debug/pprof/mutex", "the mutex profile path")
-var scrapeInterval = flag.Duration("scrape-interval", 250*time.Millisecond, "the scrape interval")
-var profileInterval = flag.Duration("profile-interval", 2*time.Second, "the profile interval")
-var initColumns = flag.Int("columns", 3, "the initial number of columns")
-var selfAddr = flag.String("self-addr", ":7070", "the UI metrics addr")
+var metricsPath = flag.String("metrics-path", "/metrics", "the metrics path")
+var cpuProfilePath = flag.String("cpu-profile-path", "/debug/pprof/profile", "the CPU profile path")
+var allocsProfilePath = flag.String("allocs-profile-path", "/debug/pprof/allocs", "the allocs profile path")
+var heapProfilePath = flag.String("heap-profile-path", "/debug/pprof/heap", "the heap profile path")
+var blockProfilePath = flag.String("block-profile-path", "/debug/pprof/block", "the block profile path")
+var mutexProfilePath = flag.String("mutex-profile-path", "/debug/pprof/mutex", "the mutex profile path")
+var scrapeInterval = flag.Duration("scrape-interval", 250*time.Millisecond, "the default scrape interval")
+var profileInterval = flag.Duration("profile-interval", 2*time.Second, "the default profile interval")
+var initColumns = flag.Int("columns", 3, "the default number of columns")
+var selfAddr = flag.String("self-addr", ":7070", "the address for govs own metrics")
 var metricsSplitDepth = flag.Int("metrics-split-depth", 3, "the metrics split depth")
 
 var metricWindows = map[string]*metricWindow{}
@@ -39,18 +39,24 @@ func main() {
 		panic(http.ListenAndServe(*selfAddr, nil))
 	}()
 
+	// get target
+	target := strings.TrimRight(flag.Arg(0), "/")
+	if target == "" {
+		target = "http://0.0.0.0:6060"
+	}
+
 	// create master window
-	master := giu.NewMasterWindow(*targetURL, 1400, 900, 0)
+	master := giu.NewMasterWindow(target, 1400, 900, 0)
 
 	// run metrics loader
-	go metricsLoader(*targetURL + *metricsPath)
+	go metricsLoader(target + *metricsPath)
 
 	// run profiler loaders
-	go profileLoader("cpu", "cpu", *targetURL+*cpuProfilePath)
-	go profileLoader("allocs", "alloc_space", *targetURL+*allocsProfilePath)
-	go profileLoader("heap", "inuse_space", *targetURL+*heapProfilePath)
-	go profileLoader("block", "delay", *targetURL+*blockProfilePath)
-	go profileLoader("mutex", "delay", *targetURL+*mutexProfilePath)
+	go profileLoader("cpu", "cpu", target+*cpuProfilePath)
+	go profileLoader("allocs", "alloc_space", target+*allocsProfilePath)
+	go profileLoader("heap", "inuse_space", target+*heapProfilePath)
+	go profileLoader("block", "delay", target+*blockProfilePath)
+	go profileLoader("mutex", "delay", target+*mutexProfilePath)
 
 	// prepare scrape intervals
 	scrapeIntervals := []time.Duration{
