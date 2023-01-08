@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/AllenDang/giu"
+	"github.com/AllenDang/imgui-go"
 	"github.com/go-gl/gl/v3.2-core/gl"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/samber/lo"
@@ -15,6 +16,7 @@ import (
 
 var seriesLength = flag.Int("series-length", 100, "the series length")
 var metricsPath = flag.String("metrics-path", "/metrics", "the metrics path")
+var tracePath = flag.String("traces-path", "/trace", "the trace path")
 var cpuProfilePath = flag.String("cpu-profile-path", "/debug/pprof/profile", "the CPU profile path")
 var allocsProfilePath = flag.String("allocs-profile-path", "/debug/pprof/allocs", "the allocs profile path")
 var heapProfilePath = flag.String("heap-profile-path", "/debug/pprof/heap", "the heap profile path")
@@ -27,7 +29,10 @@ var selfAddr = flag.String("self-addr", ":7070", "the address for govs own metri
 var metricsSplitDepth = flag.Int("metrics-split-depth", 3, "the metrics split depth")
 
 var metricWindows = map[string]*metricWindow{}
+var traceWindows = map[string]*traceWindow{}
 var profileWindows = map[string]*profileWindow{}
+
+var autoUpdate = false
 
 func main() {
 	// parse flags
@@ -48,8 +53,12 @@ func main() {
 	// create master window
 	master := giu.NewMasterWindow(target, 1400, 900, 0)
 
-	// run metrics loader
+	// allow long draw lists
+	imgui.CurrentIO().SetBackendFlags(imgui.BackendFlagsRendererHasVtxOffset)
+
+	// run metrics and trace loader
 	go metricsLoader(target + *metricsPath)
+	go traceLoader(target + *tracePath)
 
 	// run profiler loaders
 	go profileLoader("cpu", "cpu", target+*cpuProfilePath)
@@ -74,6 +83,15 @@ func main() {
 		10 * time.Second,
 	}
 
+	// run periodic updater (50 Hz)
+	go func() {
+		for range time.Tick(20 * time.Millisecond) {
+			if autoUpdate {
+				giu.Update()
+			}
+		}
+	}()
+
 	// run ui code
 	master.Run(func() {
 		// update profile windows
@@ -88,6 +106,9 @@ func main() {
 			giu.MainMenuBar().Layout(
 				giu.Menu("Metrics").Layout(
 					buildMetricsMenuItems(tree)...,
+				),
+				giu.Menu("Traces").Layout(
+					buildTracesMenuItems()...,
 				),
 				giu.Menu("Profiles").Layout(
 					buildProfileMenuItem("cpu", "CPU"),
@@ -119,11 +140,24 @@ func main() {
 		gl.ClearColor(40.0/255.0, 45.0/255.0, 50.0/255.0, 1)
 		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
+		// reset auto update
+		autoUpdate = false
+
 		// draw metric windows
 		for key, win := range metricWindows {
 			if !win.open {
 				delete(metricWindows, key)
 			} else {
+				win.draw(master)
+			}
+		}
+
+		// draw metric windows
+		for key, win := range traceWindows {
+			if !win.open {
+				delete(traceWindows, key)
+			} else {
+				autoUpdate = true
 				win.draw(master)
 			}
 		}
@@ -178,6 +212,26 @@ func buildMetricsMenuItems(node *metricsNode) []giu.Widget {
 	return widgets
 }
 
+func buildTracesMenuItems() []giu.Widget {
+	// collect widgets
+	var widgets []giu.Widget
+	traceMutex.Lock()
+	for name := range traceStreams {
+		name := name
+		widgets = append(widgets, giu.MenuItem(name).OnClick(func() {
+			if traceWindows[name] == nil {
+				traceWindows[name] = &traceWindow{
+					name: name,
+					open: true,
+				}
+			}
+		}))
+	}
+	traceMutex.Unlock()
+
+	return widgets
+}
+
 func buildProfileMenuItem(name, title string) *giu.MenuItemWidget {
 	return giu.MenuItem(title).OnClick(func() {
 		if profileWindows[name] == nil {
@@ -204,6 +258,21 @@ func metricsLoader(url string) {
 
 		// await next interval
 		time.Sleep(*scrapeInterval)
+	}
+}
+
+func traceLoader(url string) {
+	for {
+		// load traces
+		err := loadTraces(url, func() {
+			giu.Update()
+		})
+		if err != nil {
+			println("trace: " + err.Error())
+		}
+
+		// debounce reconnect
+		time.Sleep(time.Second)
 	}
 }
 
