@@ -38,6 +38,11 @@ func scrapeMetrics(url string, splitDepth int) error {
 	// ensure close
 	defer res.Body.Close()
 
+	// skip if absent
+	if res.StatusCode == http.StatusNotFound {
+		return nil
+	}
+
 	// determine format
 	format := expfmt.ResponseFormat(res.Header)
 
